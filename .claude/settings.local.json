@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__figma__get_design_context",
+      "mcp__figma__get_screenshot",
+      "Bash(npx expo install:*)",
+      "Bash(node -e:*)",
+      "Bash(node --conditions=react-native -e:*)",
+      "Bash(npm dedupe:*)",
+      "Bash(npx tsc:*)",
+      "mcp__ide__getDiagnostics"
+    ]
+  }
+}
