@@ -49,16 +49,16 @@ export default function IncomeScreen() {
 
   function handleTabPress(key: string) {
     if (key === 'income') return;
+    if (key === 'home') {
+      router.replace('/hello');
+      return;
+    }
     if (key === 'expenses') {
-      router.push('/expenses');
+      router.replace('/expenses');
       return;
     }
     if (key === 'settings') {
-      router.push('/settings');
-      return;
-    }
-    if (key === 'home') {
-      router.back();
+      router.replace('/settings');
       return;
     }
   }

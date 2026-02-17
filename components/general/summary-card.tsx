@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-type SummaryCardVariant = 'income' | 'expense' | 'balance';
+type SummaryCardVariant = 'income' | 'expense' | 'balance' | 'date';
 
 type SummaryCardProps = {
   label: string;
@@ -12,6 +12,7 @@ const variantStyles: Record<SummaryCardVariant, { bg: string; label: string; amo
   income: { bg: '#f0fdf4', label: '#16a34a', amount: '#15803d' },
   expense: { bg: '#fef2f2', label: '#dc2626', amount: '#b91c1c' },
   balance: { bg: '#eff6ff', label: '#2563eb', amount: '#1d4ed8' },
+  date: { bg: '#f5f3ff', label: '#7c3aed', amount: '#6d28d9' },
 };
 
 export function SummaryCard({ label, amount, variant }: SummaryCardProps) {
