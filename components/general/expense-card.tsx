@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export type Expense = {
   id: string;
@@ -12,6 +13,7 @@ export type Expense = {
   isPaymentPlan?: boolean;
   totalPayments?: number;
   currentPayment?: number;
+  active?: boolean;
 };
 
 type ExpenseCardProps = {
@@ -21,14 +23,22 @@ type ExpenseCardProps = {
 };
 
 export function ExpenseCard({ expense, onToggle, onPress }: ExpenseCardProps) {
-  const { id, title, category, amount, checked, icon, iconBgColor, isPaymentPlan, currentPayment, totalPayments } = expense;
+  const { id, title, category, amount, checked, icon, iconBgColor, isPaymentPlan, currentPayment, totalPayments, active } = expense;
+  const borderColor = active === false ? '#d1d5db' : '#22c55e';
+
+  const isLastPayment =
+    isPaymentPlan &&
+    currentPayment != null &&
+    totalPayments != null &&
+    totalPayments > 0 &&
+    currentPayment >= totalPayments;
 
   const subtitle = isPaymentPlan
     ? `${currentPayment}/${totalPayments} payments`
     : category;
 
-  const card = (
-    <View style={styles.card}>
+  const cardContent = (
+    <View style={styles.cardInner}>
       {onToggle && (
         <TouchableOpacity
           style={[styles.checkbox, checked && styles.checkboxChecked]}
@@ -51,6 +61,27 @@ export function ExpenseCard({ expense, onToggle, onPress }: ExpenseCardProps) {
       <Text style={styles.amount}>
         ${amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
       </Text>
+
+      {isLastPayment && (
+        <View style={styles.crownBadge}>
+          <Ionicons name="trophy" size={14} color="#eab308" />
+        </View>
+      )}
+    </View>
+  );
+
+  const card = isLastPayment ? (
+    <LinearGradient
+      colors={['#f59e0b', '#eab308', '#22c55e']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.gradientBorder}
+    >
+      {cardContent}
+    </LinearGradient>
+  ) : (
+    <View style={[styles.card, active != null && { borderColor }]}>
+      {cardContent}
     </View>
   );
 
@@ -67,12 +98,19 @@ export function ExpenseCard({ expense, onToggle, onPress }: ExpenseCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 8,
+  },
+  gradientBorder: {
+    borderRadius: 8,
+    padding: 2,
+  },
+  cardInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 6,
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
@@ -121,5 +159,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1f2937',
     letterSpacing: -0.5,
+  },
+  crownBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
   },
 });

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -39,6 +41,7 @@ export default function EditExpenseModal() {
   const [isPaymentPlan, setIsPaymentPlan] = useState(false);
   const [totalPayments, setTotalPayments] = useState('');
   const [currentPayment, setCurrentPayment] = useState('');
+  const [active, setActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -64,6 +67,7 @@ export default function EditExpenseModal() {
       setIsPaymentPlan(d.isPaymentPlan ?? false);
       setTotalPayments(d.totalPayments != null ? String(d.totalPayments) : '');
       setCurrentPayment(d.currentPayment != null ? String(d.currentPayment) : '');
+      setActive(d.active ?? true);
       setLoaded(true);
     }
 
@@ -91,6 +95,7 @@ export default function EditExpenseModal() {
         icon: icon.name,
         iconBgColor: icon.color,
         amount: parsedAmount,
+        active,
         isPaymentPlan,
         ...(isPaymentPlan
           ? {
@@ -160,110 +165,129 @@ export default function EditExpenseModal() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.form}>
-        {/* Name */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Name</Text>
-          <AppInput
-            placeholder="e.g. Grocery Shopping"
-            value={name}
-            onChangeText={setName}
-          />
-        </View>
-
-        {/* Amount */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Amount</Text>
-          <AppInput
-            placeholder="0.00"
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="numeric"
-          />
-        </View>
-
-        {/* Icon Picker */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Icon</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.iconRow}
-          >
-            {ICON_OPTIONS.map((opt, i) => (
-              <TouchableOpacity
-                key={opt.name}
-                style={[
-                  styles.iconCircle,
-                  { backgroundColor: opt.color },
-                  selectedIcon === i && styles.iconSelected,
-                ]}
-                onPress={() => setSelectedIcon(i)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name={opt.name} size={22} color="#374151" />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Payment Plan Toggle */}
-        <TouchableOpacity
-          style={styles.toggleRow}
-          onPress={() => setIsPaymentPlan(!isPaymentPlan)}
-          activeOpacity={0.7}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.form}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.checkbox, isPaymentPlan && styles.checkboxChecked]}>
-            {isPaymentPlan && <Ionicons name="checkmark" size={14} color="#fff" />}
+          {/* Name */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Name</Text>
+            <AppInput
+              placeholder="e.g. Grocery Shopping"
+              value={name}
+              onChangeText={setName}
+            />
           </View>
-          <Text style={styles.toggleLabel}>Payment plan</Text>
-        </TouchableOpacity>
 
-        {isPaymentPlan && (
-          <>
-            <View style={styles.field}>
-              <Text style={styles.label}>Number of payments</Text>
-              <AppInput
-                placeholder="e.g. 12"
-                value={totalPayments}
-                onChangeText={setTotalPayments}
-                keyboardType="numeric"
-              />
+          {/* Amount */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Amount</Text>
+            <AppInput
+              placeholder="0.00"
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="numeric"
+            />
+          </View>
+
+          {/* Icon Picker */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Icon</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.iconRow}
+            >
+              {ICON_OPTIONS.map((opt, i) => (
+                <TouchableOpacity
+                  key={opt.name}
+                  style={[
+                    styles.iconCircle,
+                    { backgroundColor: opt.color },
+                    selectedIcon === i && styles.iconSelected,
+                  ]}
+                  onPress={() => setSelectedIcon(i)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name={opt.name} size={22} color="#374151" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Payment Plan Toggle */}
+          <TouchableOpacity
+            style={styles.toggleRow}
+            onPress={() => setIsPaymentPlan(!isPaymentPlan)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, isPaymentPlan && styles.checkboxChecked]}>
+              {isPaymentPlan && <Ionicons name="checkmark" size={14} color="#fff" />}
             </View>
-            <View style={styles.field}>
-              <Text style={styles.label}>Current payment</Text>
-              <AppInput
-                placeholder="e.g. 1"
-                value={currentPayment}
-                onChangeText={setCurrentPayment}
-                keyboardType="numeric"
-              />
+            <Text style={styles.toggleLabel}>Payment plan</Text>
+          </TouchableOpacity>
+
+          {isPaymentPlan && (
+            <>
+              <View style={styles.field}>
+                <Text style={styles.label}>Number of payments</Text>
+                <AppInput
+                  placeholder="e.g. 12"
+                  value={totalPayments}
+                  onChangeText={setTotalPayments}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.field}>
+                <Text style={styles.label}>Current payment</Text>
+                <AppInput
+                  placeholder="e.g. 1"
+                  value={currentPayment}
+                  onChangeText={setCurrentPayment}
+                  keyboardType="numeric"
+                />
+              </View>
+            </>
+          )}
+
+          {/* Active Toggle */}
+          <TouchableOpacity
+            style={styles.toggleRow}
+            onPress={() => setActive(!active)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, active && styles.checkboxChecked]}>
+              {active && <Ionicons name="checkmark" size={14} color="#fff" />}
             </View>
-          </>
-        )}
+            <Text style={styles.toggleLabel}>Active</Text>
+          </TouchableOpacity>
 
-        <View style={styles.spacer} />
+          {/* Save */}
+          <AppButton
+            title={saving ? 'Saving...' : 'Save Changes'}
+            variant="primary"
+            onPress={handleSave}
+            disabled={saving || deleting}
+          />
 
-        {/* Save */}
-        <AppButton
-          title={saving ? 'Saving...' : 'Save Changes'}
-          variant="primary"
-          onPress={handleSave}
-          disabled={saving || deleting}
-        />
-
-        {/* Delete */}
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={handleDelete}
-          disabled={saving || deleting}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.deleteText}>
-            {deleting ? 'Deleting...' : 'Delete Expense'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          {/* Delete */}
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            disabled={saving || deleting}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.deleteText}>
+              {deleting ? 'Deleting...' : 'Delete Expense'}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -272,6 +296,9 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  flex: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -298,10 +325,9 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   form: {
-    flex: 1,
     paddingHorizontal: 16,
     paddingTop: 24,
-    paddingBottom: 16,
+    paddingBottom: 32,
   },
   field: {
     marginBottom: 20,
@@ -351,9 +377,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#374151',
     marginLeft: 10,
-  },
-  spacer: {
-    flex: 1,
   },
   deleteButton: {
     alignItems: 'center',

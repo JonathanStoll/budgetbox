@@ -43,6 +43,7 @@ export default function ExpensesScreen() {
           isPaymentPlan: d.isPaymentPlan as boolean | undefined,
           totalPayments: d.totalPayments as number | undefined,
           currentPayment: d.currentPayment as number | undefined,
+          active: (d.active ?? true) as boolean,
         };
       });
       setExpenses(data);
@@ -53,16 +54,16 @@ export default function ExpensesScreen() {
 
   function handleTabPress(key: string) {
     if (key === 'expenses') return;
+    if (key === 'home') {
+      router.replace('/hello');
+      return;
+    }
     if (key === 'income') {
-      router.push('/income');
+      router.replace('/income');
       return;
     }
     if (key === 'settings') {
-      router.push('/settings');
-      return;
-    }
-    if (key === 'home') {
-      router.back();
+      router.replace('/settings');
       return;
     }
   }

@@ -21,12 +21,18 @@ export default function SettingsScreen() {
   const [activeTab] = useState('settings');
 
   function handleTabPress(key: string) {
-    if (key === 'expenses') {
-      router.push('/expenses');
+    if (key === 'settings') return;
+    if (key === 'home') {
+      router.replace('/hello');
       return;
     }
-    if (key !== 'settings') {
-      router.back();
+    if (key === 'expenses') {
+      router.replace('/expenses');
+      return;
+    }
+    if (key === 'income') {
+      router.replace('/income');
+      return;
     }
   }
 

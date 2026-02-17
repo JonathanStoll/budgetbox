@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,27 +13,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { Calendar } from 'react-native-calendars';
 
 import { db } from '@/firebaseconfig';
 import { AppInput } from '@/components/general/app-input';
 import { AppButton } from '@/components/general/app-button';
 
-const MONTH_NAMES = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
+function toDateString(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
 
 export default function EditIncomeModal() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const years = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1, currentYear + 2];
-
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState(1);
-  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedDate, setSelectedDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -50,8 +47,10 @@ export default function EditIncomeModal() {
       const d = snap.data();
       setName(d.name ?? '');
       setAmount(String(d.amount ?? ''));
-      setSelectedMonth(d.month ?? 1);
-      setSelectedYear(d.year ?? currentYear);
+      const month = d.month ?? 1;
+      const year = d.year ?? new Date().getFullYear();
+      const day = d.day ?? 1;
+      setSelectedDate(toDateString(year, month, day));
       setLoaded(true);
     }
 
@@ -71,13 +70,16 @@ export default function EditIncomeModal() {
       return;
     }
 
+    const [yearStr, monthStr, dayStr] = selectedDate.split('-');
+
     setSaving(true);
     try {
       await updateDoc(doc(db, 'income', id!), {
         name: trimmedName,
         amount: parsedAmount,
-        month: selectedMonth,
-        year: selectedYear,
+        month: parseInt(monthStr, 10),
+        year: parseInt(yearStr, 10),
+        day: parseInt(dayStr, 10),
       });
       router.back();
     } catch {
@@ -137,103 +139,77 @@ export default function EditIncomeModal() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.form}>
-        {/* Name */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Name</Text>
-          <AppInput
-            placeholder="e.g. Salary"
-            value={name}
-            onChangeText={setName}
-          />
-        </View>
-
-        {/* Amount */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Amount</Text>
-          <AppInput
-            placeholder="0.00"
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="numeric"
-          />
-        </View>
-
-        {/* Month Picker */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Month</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.pickerRow}
-          >
-            {MONTH_NAMES.map((m, i) => {
-              const monthNum = i + 1;
-              const isSelected = selectedMonth === monthNum;
-              return (
-                <TouchableOpacity
-                  key={m}
-                  style={[styles.pickerChip, isSelected && styles.pickerChipSelected]}
-                  onPress={() => setSelectedMonth(monthNum)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.pickerChipText, isSelected && styles.pickerChipTextSelected]}>
-                    {m}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* Year Picker */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Year</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.pickerRow}
-          >
-            {years.map((y) => {
-              const isSelected = selectedYear === y;
-              return (
-                <TouchableOpacity
-                  key={y}
-                  style={[styles.pickerChip, isSelected && styles.pickerChipSelected]}
-                  onPress={() => setSelectedYear(y)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.pickerChipText, isSelected && styles.pickerChipTextSelected]}>
-                    {y}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        <View style={styles.spacer} />
-
-        {/* Save */}
-        <AppButton
-          title={saving ? 'Saving...' : 'Save Changes'}
-          variant="primary"
-          onPress={handleSave}
-          disabled={saving || deleting}
-        />
-
-        {/* Delete */}
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={handleDelete}
-          disabled={saving || deleting}
-          activeOpacity={0.7}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.form}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.deleteText}>
-            {deleting ? 'Deleting...' : 'Delete Income'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          {/* Name */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Name</Text>
+            <AppInput
+              placeholder="e.g. Salary"
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
+
+          {/* Amount */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Amount</Text>
+            <AppInput
+              placeholder="0.00"
+              value={amount}
+              onChangeText={setAmount}
+              keyboardType="numeric"
+            />
+          </View>
+
+          {/* Date Picker */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Date</Text>
+            <Calendar
+              current={selectedDate}
+              onDayPress={(day: { dateString: string }) => setSelectedDate(day.dateString)}
+              markedDates={{
+                [selectedDate]: { selected: true, selectedColor: '#0066ff' },
+              }}
+              theme={{
+                todayTextColor: '#0066ff',
+                arrowColor: '#0066ff',
+                textDayFontSize: 14,
+                textMonthFontSize: 16,
+                textDayHeaderFontSize: 12,
+              }}
+              style={styles.calendar}
+            />
+          </View>
+
+          {/* Save */}
+          <AppButton
+            title={saving ? 'Saving...' : 'Save Changes'}
+            variant="primary"
+            onPress={handleSave}
+            disabled={saving || deleting}
+          />
+
+          {/* Delete */}
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            disabled={saving || deleting}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.deleteText}>
+              {deleting ? 'Deleting...' : 'Delete Income'}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -242,6 +218,9 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  flex: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -268,10 +247,9 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   form: {
-    flex: 1,
     paddingHorizontal: 16,
     paddingTop: 24,
-    paddingBottom: 16,
+    paddingBottom: 32,
   },
   field: {
     marginBottom: 20,
@@ -282,32 +260,10 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 8,
   },
-  pickerRow: {
-    gap: 8,
-    paddingVertical: 4,
-  },
-  pickerChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+  calendar: {
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#e5e7eb',
-    backgroundColor: '#fff',
-  },
-  pickerChipSelected: {
-    backgroundColor: '#0066ff',
-    borderColor: '#0066ff',
-  },
-  pickerChipText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  pickerChipTextSelected: {
-    color: '#fff',
-  },
-  spacer: {
-    flex: 1,
   },
   deleteButton: {
     alignItems: 'center',

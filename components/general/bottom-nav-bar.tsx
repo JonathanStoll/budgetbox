@@ -31,10 +31,10 @@ export function BottomNavBar({ tabs, activeTab, onTabPress }: BottomNavBarProps)
                 onPress={() => onTabPress?.(tab.key)}
                 activeOpacity={0.8}
               >
-                <View style={styles.centerCircle}>
-                  <Ionicons name={tab.icon} size={22} color="#fff" />
+                <View style={[styles.centerCircle, !isActive && styles.centerCircleInactive]}>
+                  <Ionicons name={tab.icon} size={22} color={isActive ? '#fff' : '#9ca3af'} />
                 </View>
-                <Text style={[styles.label, styles.centerLabel]}>{tab.label}</Text>
+                <Text style={[styles.label, isActive && styles.centerLabel]}>{tab.label}</Text>
               </TouchableOpacity>
             );
           }
@@ -92,6 +92,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#6366f1',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  centerCircleInactive: {
+    backgroundColor: '#e5e7eb',
   },
   label: {
     fontSize: 12,
