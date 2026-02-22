@@ -34,6 +34,10 @@ export default function SettingsScreen() {
       router.replace('/income');
       return;
     }
+    if (key === 'preview') {
+      router.replace('/preview');
+      return;
+    }
   }
 
   function handleLogout() {

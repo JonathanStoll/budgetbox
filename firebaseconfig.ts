@@ -1,5 +1,6 @@
 import { getApps, initializeApp, getApp } from "firebase/app";
 import {
+  type Auth,
   getReactNativePersistence,
   initializeAuth,
   getAuth,
@@ -20,7 +21,7 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // initializeAuth must only be called once per app. On hot-reload the app
 // already exists so getAuth is used instead.
-let auth;
+let auth: Auth;
 try {
   auth = initializeAuth(app, {
     persistence: getReactNativePersistence(ReactNativeAsyncStorage),

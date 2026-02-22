@@ -22,6 +22,7 @@ export default function RootLayout() {
         <Stack.Screen name="expenses" options={{ headerShown: false }} />
         <Stack.Screen name="add-expense-modal" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="edit-expense-modal" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="preview" options={{ headerShown: false }} />
         <Stack.Screen name="income" options={{ headerShown: false }} />
         <Stack.Screen name="add-income-modal" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="edit-income-modal" options={{ presentation: 'modal', headerShown: false }} />
