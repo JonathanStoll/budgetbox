@@ -66,6 +66,10 @@ export default function ExpensesScreen() {
       router.replace('/settings');
       return;
     }
+    if (key === 'preview') {
+      router.replace('/preview');
+      return;
+    }
   }
 
   return (

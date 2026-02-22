@@ -258,6 +258,10 @@ export default function HomeScreen() {
       router.replace('/income');
       return;
     }
+    if (key === 'preview') {
+      router.replace('/preview');
+      return;
+    }
     setActiveTab(key);
   }
 

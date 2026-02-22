@@ -8,7 +8,9 @@
       "Bash(node --conditions=react-native -e:*)",
       "Bash(npm dedupe:*)",
       "Bash(npx tsc:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(ls:*)",
+      "Bash(npx expo export:*)"
     ]
   }
 }

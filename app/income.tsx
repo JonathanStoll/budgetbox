@@ -61,6 +61,10 @@ export default function IncomeScreen() {
       router.replace('/settings');
       return;
     }
+    if (key === 'preview') {
+      router.replace('/preview');
+      return;
+    }
   }
 
   return (
