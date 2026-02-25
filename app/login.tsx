@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -15,9 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  sendEmailVerification,
 } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
-import { auth } from '@/firebaseconfig';
+import { auth, db } from '@/firebaseconfig';
 import { AppInput } from '@/components/general/app-input';
 import { AppButton } from '@/components/general/app-button';
 
@@ -28,6 +32,10 @@ export default function LoginScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const [forgotPasswordVisible, setForgotPasswordVisible] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+
   async function handleSubmit() {
     if (!email.trim() || !password.trim()) {
       Alert.alert('Missing fields', 'Please enter both email and password.');
@@ -37,11 +45,36 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email.trim(), password);
+        const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        const user = userCredential.user;
+
+        try {
+          await sendEmailVerification(user);
+        } catch (verifyError: any) {
+          // Non-blocking — user can resend from the verify-email screen
+        }
+
+        try {
+          await setDoc(
+            doc(db, 'users', user.uid),
+            {
+              uid: user.uid,
+              email: user.email,
+              emailVerified: false,
+              createdAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+        } catch (firestoreError: any) {
+          // Non-blocking — routing does not depend on the Firestore document
+        }
+
+        router.replace('/verify-email');
       } else {
-        await signInWithEmailAndPassword(auth, email.trim(), password);
+        const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+        const user = userCredential.user;
+        router.replace(user.emailVerified ? '/hello' : '/verify-email');
       }
-      router.replace('/hello');
     } catch (error: any) {
       const code = error?.code as string | undefined;
       let message = 'Something went wrong. Please try again.';
@@ -70,6 +103,52 @@ export default function LoginScreen() {
       Alert.alert(isSignUp ? 'Sign Up Failed' : 'Sign In Failed', message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleForgotPassword() {
+    const trimmed = resetEmail.trim();
+
+    if (!trimmed) {
+      Alert.alert('Email required', 'Please enter your email address.');
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, trimmed);
+      Alert.alert(
+        'Reset email sent',
+        'If an account with this email exists, a password reset link has been sent. Check your inbox.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setForgotPasswordVisible(false);
+              setResetEmail('');
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      const code = error?.code as string | undefined;
+      let message = 'Something went wrong. Please try again.';
+
+      switch (code) {
+        case 'auth/invalid-email':
+          message = 'Please enter a valid email address.';
+          break;
+        case 'auth/too-many-requests':
+          message = 'Too many attempts. Please wait a moment and try again.';
+          break;
+        case 'auth/network-request-failed':
+          message = 'Network error. Check your connection and try again.';
+          break;
+      }
+
+      Alert.alert('Reset Failed', message);
+    } finally {
+      setResetLoading(false);
     }
   }
 
@@ -124,6 +203,7 @@ export default function LoginScreen() {
                   onRightIconPress={() => setShowPassword(!showPassword)}
                   placeholder="Enter your password"
                   secureTextEntry={!showPassword}
+                  autoCapitalize="none"
                   value={password}
                   onChangeText={setPassword}
                 />
@@ -131,7 +211,16 @@ export default function LoginScreen() {
 
               {/* Forgot password */}
               {!isSignUp && (
-                <Text style={styles.forgotPassword}>Forgot password?</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setResetEmail(email.trim());
+                    setForgotPasswordVisible(true);
+                  }}
+                  accessibilityLabel="Forgot password"
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.forgotPassword}>Forgot password?</Text>
+                </TouchableOpacity>
               )}
 
               {/* Submit */}
@@ -145,6 +234,8 @@ export default function LoginScreen() {
                 }
                 onPress={handleSubmit}
                 disabled={loading}
+                accessibilityLabel={isSignUp ? 'Create account' : 'Sign in'}
+                accessibilityRole="button"
               />
               {loading && (
                 <ActivityIndicator
@@ -154,18 +245,6 @@ export default function LoginScreen() {
                 />
               )}
             </View>
-
-            {/* Divider */}
-            {!isSignUp && (
-              <>
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>or</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-                <AppButton title="Continue with Google" variant="outline" />
-              </>
-            )}
 
             {/* Toggle sign in / sign up */}
             <View style={styles.signUpSection}>
@@ -187,6 +266,77 @@ export default function LoginScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Forgot Password Modal */}
+      <Modal
+        visible={forgotPasswordVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setForgotPasswordVisible(false);
+          setResetEmail('');
+        }}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            setForgotPasswordVisible(false);
+            setResetEmail('');
+          }}
+          accessibilityLabel="Dismiss password reset"
+          accessibilityRole="button"
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Reset your password</Text>
+            <Text style={styles.modalSubtitle}>
+              Enter your email and we'll send you a reset link.
+            </Text>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Email</Text>
+              <AppInput
+                icon="mail-outline"
+                placeholder="Enter your email"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={resetEmail}
+                onChangeText={setResetEmail}
+                autoFocus
+              />
+            </View>
+
+            <AppButton
+              title={resetLoading ? '' : 'Send Reset Link'}
+              onPress={handleForgotPassword}
+              disabled={resetLoading}
+              style={styles.modalButton}
+              accessibilityLabel="Send password reset link"
+              accessibilityRole="button"
+            />
+            {resetLoading && (
+              <ActivityIndicator
+                style={styles.loader}
+                color="#fff"
+                size="small"
+              />
+            )}
+
+            <TouchableOpacity
+              style={styles.modalCancel}
+              onPress={() => {
+                setForgotPasswordVisible(false);
+                setResetEmail('');
+              }}
+              accessibilityLabel="Cancel password reset"
+              accessibilityRole="button"
+            >
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -263,19 +413,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
 
-  /* Divider */
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: { flex: 1, height: 1, backgroundColor: '#e5e7eb' },
-  dividerText: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginHorizontal: 12,
-  },
-
   /* Sign up */
   signUpSection: { alignItems: 'center', marginTop: 24 },
   signUpLabel: { fontSize: 14, color: '#6b7280' },
@@ -295,4 +432,50 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   footerLink: { fontSize: 12, color: '#9ca3af' },
+
+  /* Forgot password modal */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 40,
+    gap: 16,
+  },
+  modalButton: { marginTop: 8 },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    letterSpacing: -0.5,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    letterSpacing: -0.5,
+    marginTop: -4,
+  },
+  modalCancel: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  modalCancelText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
 });
