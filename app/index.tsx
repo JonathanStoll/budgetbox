@@ -5,19 +5,25 @@ import { onAuthStateChanged } from 'firebase/auth';
 
 import { auth } from '@/firebaseconfig';
 
+type Destination = '/login' | '/verify-email' | '/hello';
+
 export default function Index() {
-  const [checking, setChecking] = useState(true);
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [destination, setDestination] = useState<Destination | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setLoggedIn(!!user);
-      setChecking(false);
+      if (!user) {
+        setDestination('/login');
+      } else if (!user.emailVerified) {
+        setDestination('/verify-email');
+      } else {
+        setDestination('/hello');
+      }
     });
     return unsubscribe;
   }, []);
 
-  if (checking) {
+  if (destination === null) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#0066ff" />
@@ -25,7 +31,7 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={loggedIn ? '/hello' : '/login'} />;
+  return <Redirect href={destination} />;
 }
 
 const styles = StyleSheet.create({
