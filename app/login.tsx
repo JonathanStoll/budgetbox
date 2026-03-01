@@ -24,8 +24,11 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/firebaseconfig';
 import { AppInput } from '@/components/general/app-input';
 import { AppButton } from '@/components/general/app-button';
+import { useLanguage } from '@/context/language-context';
 
 export default function LoginScreen() {
+  const { lang } = useLanguage();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -38,7 +41,7 @@ export default function LoginScreen() {
 
   async function handleSubmit() {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please enter both email and password.');
+      Alert.alert(lang.login.missingFields, lang.login.pleaseEnterEmailPassword);
       return;
     }
 
@@ -77,30 +80,30 @@ export default function LoginScreen() {
       }
     } catch (error: any) {
       const code = error?.code as string | undefined;
-      let message = 'Something went wrong. Please try again.';
+      let message = lang.common.somethingWentWrong;
 
       switch (code) {
         case 'auth/invalid-email':
-          message = 'Please enter a valid email address.';
+          message = lang.login.invalidEmail;
           break;
         case 'auth/user-not-found':
-          message = 'No account found with this email.';
+          message = lang.login.noAccountFound;
           break;
         case 'auth/wrong-password':
-          message = 'Incorrect password.';
+          message = lang.login.incorrectPassword;
           break;
         case 'auth/invalid-credential':
-          message = 'Invalid email or password.';
+          message = lang.login.invalidCredential;
           break;
         case 'auth/email-already-in-use':
-          message = 'An account with this email already exists.';
+          message = lang.login.accountExists;
           break;
         case 'auth/weak-password':
-          message = 'Password should be at least 6 characters.';
+          message = lang.login.weakPassword;
           break;
       }
 
-      Alert.alert(isSignUp ? 'Sign Up Failed' : 'Sign In Failed', message);
+      Alert.alert(isSignUp ? lang.login.signUpFailed : lang.login.signInFailed, message);
     } finally {
       setLoading(false);
     }
@@ -110,43 +113,39 @@ export default function LoginScreen() {
     const trimmed = resetEmail.trim();
 
     if (!trimmed) {
-      Alert.alert('Email required', 'Please enter your email address.');
+      Alert.alert(lang.login.emailRequired, lang.login.pleaseEnterEmail);
       return;
     }
 
     setResetLoading(true);
     try {
       await sendPasswordResetEmail(auth, trimmed);
-      Alert.alert(
-        'Reset email sent',
-        'If an account with this email exists, a password reset link has been sent. Check your inbox.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setForgotPasswordVisible(false);
-              setResetEmail('');
-            },
+      Alert.alert(lang.login.resetEmailSent, lang.login.resetEmailSentMsg, [
+        {
+          text: lang.common.ok,
+          onPress: () => {
+            setForgotPasswordVisible(false);
+            setResetEmail('');
           },
-        ]
-      );
+        },
+      ]);
     } catch (error: any) {
       const code = error?.code as string | undefined;
-      let message = 'Something went wrong. Please try again.';
+      let message = lang.common.somethingWentWrong;
 
       switch (code) {
         case 'auth/invalid-email':
-          message = 'Please enter a valid email address.';
+          message = lang.login.invalidEmail;
           break;
         case 'auth/too-many-requests':
-          message = 'Too many attempts. Please wait a moment and try again.';
+          message = lang.login.tooManyAttempts;
           break;
         case 'auth/network-request-failed':
-          message = 'Network error. Check your connection and try again.';
+          message = lang.login.networkError;
           break;
       }
 
-      Alert.alert('Reset Failed', message);
+      Alert.alert(lang.login.resetFailed, message);
     } finally {
       setResetLoading(false);
     }
@@ -167,26 +166,26 @@ export default function LoginScreen() {
             <View style={styles.logoBox}>
               <Ionicons name="wallet-outline" size={28} color="#fff" />
             </View>
-            <Text style={styles.appName}>BudgetPro</Text>
-            <Text style={styles.tagline}>Smart budgeting made simple</Text>
+            <Text style={styles.appName}>{lang.login.appName}</Text>
+            <Text style={styles.tagline}>{lang.login.tagline}</Text>
           </View>
 
           {/* Form */}
           <View style={styles.formSection}>
             <Text style={styles.heading}>
-              {isSignUp ? 'Create account' : 'Welcome back'}
+              {isSignUp ? lang.login.createAccountHeading : lang.login.welcomeBack}
             </Text>
             <Text style={styles.subheading}>
-              {isSignUp ? 'Sign up to get started' : 'Sign in to your account'}
+              {isSignUp ? lang.login.signUpSubtitle : lang.login.signInSubtitle}
             </Text>
 
             <View style={styles.form}>
               {/* Email */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>{lang.login.email}</Text>
                 <AppInput
                   icon="mail-outline"
-                  placeholder="Enter your email"
+                  placeholder={lang.login.emailPlaceholder}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   value={email}
@@ -196,12 +195,12 @@ export default function LoginScreen() {
 
               {/* Password */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>{lang.login.password}</Text>
                 <AppInput
                   icon="lock-closed-outline"
                   rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
                   onRightIconPress={() => setShowPassword(!showPassword)}
-                  placeholder="Enter your password"
+                  placeholder={lang.login.passwordPlaceholder}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   value={password}
@@ -219,41 +218,31 @@ export default function LoginScreen() {
                   accessibilityLabel="Forgot password"
                   accessibilityRole="button"
                 >
-                  <Text style={styles.forgotPassword}>Forgot password?</Text>
+                  <Text style={styles.forgotPassword}>{lang.login.forgotPassword}</Text>
                 </TouchableOpacity>
               )}
 
               {/* Submit */}
               <AppButton
-                title={
-                  loading
-                    ? ''
-                    : isSignUp
-                      ? 'Create Account'
-                      : 'Sign In'
-                }
+                title={loading ? '' : isSignUp ? lang.login.createAccountBtn : lang.login.signInBtn}
                 onPress={handleSubmit}
                 disabled={loading}
                 accessibilityLabel={isSignUp ? 'Create account' : 'Sign in'}
                 accessibilityRole="button"
               />
               {loading && (
-                <ActivityIndicator
-                  style={styles.loader}
-                  color="#fff"
-                  size="small"
-                />
+                <ActivityIndicator style={styles.loader} color="#fff" size="small" />
               )}
             </View>
 
             {/* Toggle sign in / sign up */}
             <View style={styles.signUpSection}>
               <Text style={styles.signUpLabel}>
-                {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+                {isSignUp ? lang.login.alreadyHaveAccount : lang.login.dontHaveAccount}
               </Text>
               <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
                 <Text style={styles.signUpLink}>
-                  {isSignUp ? 'Sign in' : 'Create an account'}
+                  {isSignUp ? lang.login.signInLink : lang.login.createAccountLink}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -261,8 +250,8 @@ export default function LoginScreen() {
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerLink}>Privacy Policy</Text>
-            <Text style={styles.footerLink}>Terms of Service</Text>
+            <Text style={styles.footerLink}>{lang.login.privacyPolicy}</Text>
+            <Text style={styles.footerLink}>{lang.login.termsOfService}</Text>
           </View>
         </View>
       </ScrollView>
@@ -289,16 +278,14 @@ export default function LoginScreen() {
         >
           <TouchableOpacity activeOpacity={1} style={styles.modalSheet}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Reset your password</Text>
-            <Text style={styles.modalSubtitle}>
-              Enter your email and we'll send you a reset link.
-            </Text>
+            <Text style={styles.modalTitle}>{lang.login.resetTitle}</Text>
+            <Text style={styles.modalSubtitle}>{lang.login.resetSubtitle}</Text>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{lang.login.email}</Text>
               <AppInput
                 icon="mail-outline"
-                placeholder="Enter your email"
+                placeholder={lang.login.emailPlaceholder}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 value={resetEmail}
@@ -308,7 +295,7 @@ export default function LoginScreen() {
             </View>
 
             <AppButton
-              title={resetLoading ? '' : 'Send Reset Link'}
+              title={resetLoading ? '' : lang.login.sendResetLink}
               onPress={handleForgotPassword}
               disabled={resetLoading}
               style={styles.modalButton}
@@ -316,11 +303,7 @@ export default function LoginScreen() {
               accessibilityRole="button"
             />
             {resetLoading && (
-              <ActivityIndicator
-                style={styles.loader}
-                color="#fff"
-                size="small"
-              />
+              <ActivityIndicator style={styles.loader} color="#fff" size="small" />
             )}
 
             <TouchableOpacity
@@ -332,7 +315,7 @@ export default function LoginScreen() {
               accessibilityLabel="Cancel password reset"
               accessibilityRole="button"
             >
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={styles.modalCancelText}>{lang.common.cancel}</Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>

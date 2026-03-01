@@ -12,19 +12,7 @@ import { auth, db } from '@/firebaseconfig';
 import { SummaryCard } from '@/components/general/summary-card';
 import { ExpenseCard, type Expense } from '@/components/general/expense-card';
 import { BottomNavBar, type NavTab } from '@/components/general/bottom-nav-bar';
-
-const tabs: NavTab[] = [
-  { key: 'income', label: 'Income', icon: 'arrow-down-outline' },
-  { key: 'expenses', label: 'Expenses', icon: 'arrow-up-outline' },
-  { key: 'home', label: 'Home', icon: 'home' },
-  { key: 'preview', label: 'Preview', icon: 'trending-up-outline' },
-  { key: 'settings', label: 'Settings', icon: 'settings-outline' },
-];
-
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
+import { useLanguage } from '@/context/language-context';
 
 type BudgetExpense = {
   expenseId: string;
@@ -56,6 +44,7 @@ function getMonthYear(offset: number): { month: number; year: number } {
 }
 
 export default function PreviewScreen() {
+  const { lang } = useLanguage();
   const [monthOffset, setMonthOffset] = useState(1); // start at next month
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -63,8 +52,16 @@ export default function PreviewScreen() {
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const tabs: NavTab[] = [
+    { key: 'income', label: lang.nav.income, icon: 'arrow-down-outline' },
+    { key: 'expenses', label: lang.nav.expenses, icon: 'arrow-up-outline' },
+    { key: 'home', label: lang.nav.home, icon: 'home' },
+    { key: 'preview', label: lang.nav.preview, icon: 'trending-up-outline' },
+    { key: 'settings', label: lang.nav.settings, icon: 'settings-outline' },
+  ];
+
   const { month, year } = getMonthYear(monthOffset);
-  const monthYearLabel = `${MONTH_NAMES[month - 1]} ${year}`;
+  const monthYearLabel = `${lang.months[month - 1]} ${year}`;
 
   const loadData = useCallback(async () => {
     const uid = auth.currentUser?.uid;
@@ -198,7 +195,7 @@ export default function PreviewScreen() {
         setBalance(incomeTotal - expenseTotal);
       }
     } catch {
-      Alert.alert('Error', 'Failed to load preview data.');
+      Alert.alert(lang.common.error, lang.preview.failedToLoad);
     } finally {
       setLoading(false);
     }
@@ -254,25 +251,25 @@ export default function PreviewScreen() {
     const html = `
       <html>
         <body style="font-family:system-ui,sans-serif;padding:32px;color:#1f2937">
-          <h1 style="color:#6366f1;margin-bottom:4px">Budget Preview</h1>
+          <h1 style="color:#6366f1;margin-bottom:4px">${lang.preview.pdfTitle}</h1>
           <h2 style="color:#6b7280;font-weight:400;margin-top:0">${monthYearLabel}</h2>
 
           <div style="display:flex;gap:16px;margin:24px 0">
             <div style="flex:1;background:#f0fdf4;padding:16px;border-radius:8px;text-align:center">
-              <div style="color:#16a34a;font-size:12px">Income</div>
+              <div style="color:#16a34a;font-size:12px">${lang.preview.income}</div>
               <div style="color:#15803d;font-size:20px;font-weight:700">${formatCurrency(totalIncome)}</div>
             </div>
             <div style="flex:1;background:#fef2f2;padding:16px;border-radius:8px;text-align:center">
-              <div style="color:#dc2626;font-size:12px">Expenses</div>
+              <div style="color:#dc2626;font-size:12px">${lang.preview.expenses}</div>
               <div style="color:#b91c1c;font-size:20px;font-weight:700">${formatCurrency(totalExpenses)}</div>
             </div>
             <div style="flex:1;background:#eff6ff;padding:16px;border-radius:8px;text-align:center">
-              <div style="color:#2563eb;font-size:12px">Balance</div>
+              <div style="color:#2563eb;font-size:12px">${lang.preview.balance}</div>
               <div style="color:#1d4ed8;font-size:20px;font-weight:700">${formatCurrency(balance)}</div>
             </div>
           </div>
 
-          <h3>Expense Breakdown</h3>
+          <h3>${lang.preview.expenseBreakdown}</h3>
           <table style="width:100%;border-collapse:collapse">
             <thead>
               <tr style="background:#f9fafb">
@@ -298,10 +295,10 @@ export default function PreviewScreen() {
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, {
         mimeType: 'application/pdf',
-        dialogTitle: `Budget Preview - ${monthYearLabel}`,
+        dialogTitle: `${lang.preview.pdfTitle} - ${monthYearLabel}`,
       });
     } catch {
-      Alert.alert('Error', 'Failed to generate PDF.');
+      Alert.alert(lang.common.error, lang.preview.pdfFailed);
     }
   }
 
@@ -327,10 +324,10 @@ export default function PreviewScreen() {
           <View style={styles.monthLabel}>
             <Text style={styles.monthText}>{monthYearLabel}</Text>
             {monthOffset === 0 && (
-              <Text style={styles.currentTag}>Current</Text>
+              <Text style={styles.currentTag}>{lang.preview.current}</Text>
             )}
             {monthOffset >= 1 && (
-              <Text style={styles.predictedTag}>Predicted</Text>
+              <Text style={styles.predictedTag}>{lang.preview.predicted}</Text>
             )}
           </View>
 
@@ -351,14 +348,14 @@ export default function PreviewScreen() {
         </View>
 
         <View style={styles.summaryRow}>
-          <SummaryCard label="Income" amount={formatCurrency(totalIncome)} variant="income" />
+          <SummaryCard label={lang.preview.income} amount={formatCurrency(totalIncome)} variant="income" />
           <View style={{ width: 12 }} />
-          <SummaryCard label="Expenses" amount={formatCurrency(totalExpenses)} variant="expense" />
+          <SummaryCard label={lang.preview.expenses} amount={formatCurrency(totalExpenses)} variant="expense" />
         </View>
         <View style={styles.summaryRow}>
-          <SummaryCard label="Balance" amount={formatCurrency(balance)} variant="balance" />
+          <SummaryCard label={lang.preview.balance} amount={formatCurrency(balance)} variant="balance" />
           <View style={{ width: 12 }} />
-          <SummaryCard label="Budget" amount={monthYearLabel} variant="date" />
+          <SummaryCard label={lang.preview.budget} amount={monthYearLabel} variant="date" />
         </View>
       </View>
 
@@ -367,7 +364,7 @@ export default function PreviewScreen() {
         {/* Pie chart */}
         {pieData.length > 0 && (
           <View style={styles.chartContainer}>
-            <Text style={styles.sectionTitle}>Expense Breakdown</Text>
+            <Text style={styles.sectionTitle}>{lang.preview.expenseBreakdown}</Text>
             <PieChart
               data={pieData}
               width={screenWidth}
@@ -385,16 +382,16 @@ export default function PreviewScreen() {
 
         {/* Expense list */}
         <Text style={styles.sectionTitle}>
-          {monthOffset === 0 ? 'Monthly Budget' : 'Predicted Expenses'}
+          {monthOffset === 0 ? lang.preview.monthlyBudget : lang.preview.predictedExpenses}
         </Text>
 
         {loading ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>Loading...</Text>
+            <Text style={styles.emptyText}>{lang.common.loading}</Text>
           </View>
         ) : expenses.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No expenses for this month</Text>
+            <Text style={styles.emptyText}>{lang.preview.noExpenses}</Text>
           </View>
         ) : (
           <View style={styles.expenseList}>

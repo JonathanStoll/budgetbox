@@ -17,6 +17,7 @@ import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/firebaseconfig';
 import { AppInput } from '@/components/general/app-input';
 import { AppButton } from '@/components/general/app-button';
+import { useLanguage } from '@/context/language-context';
 
 const ICON_OPTIONS: { name: keyof typeof Ionicons.glyphMap; color: string }[] = [
   { name: 'restaurant', color: '#ffedd5' },
@@ -33,6 +34,7 @@ const ICON_OPTIONS: { name: keyof typeof Ionicons.glyphMap; color: string }[] = 
 ];
 
 export default function EditExpenseModal() {
+  const { lang } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [name, setName] = useState('');
@@ -52,7 +54,7 @@ export default function EditExpenseModal() {
     async function fetchExpense() {
       const snap = await getDoc(doc(db, 'expenses', id!));
       if (!snap.exists()) {
-        Alert.alert('Error', 'Expense not found.');
+        Alert.alert(lang.common.error, lang.editExpense.notFound);
         router.back();
         return;
       }
@@ -79,11 +81,11 @@ export default function EditExpenseModal() {
     const parsedAmount = parseFloat(amount);
 
     if (!trimmedName) {
-      Alert.alert('Validation', 'Please enter an expense name.');
+      Alert.alert(lang.common.validation, lang.editExpense.pleaseEnterName);
       return;
     }
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      Alert.alert('Validation', 'Please enter a valid amount.');
+      Alert.alert(lang.common.validation, lang.editExpense.pleaseEnterAmount);
       return;
     }
 
@@ -109,7 +111,7 @@ export default function EditExpenseModal() {
       });
       router.back();
     } catch {
-      Alert.alert('Error', 'Failed to save changes. Please try again.');
+      Alert.alert(lang.common.error, lang.editExpense.failedToSave);
     } finally {
       setSaving(false);
     }
@@ -117,12 +119,12 @@ export default function EditExpenseModal() {
 
   function handleDelete() {
     Alert.alert(
-      'Delete Expense',
-      'Are you sure you want to delete this expense? This cannot be undone.',
+      lang.editExpense.deleteConfirmTitle,
+      lang.editExpense.deleteConfirmMsg,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: lang.common.cancel, style: 'cancel' },
         {
-          text: 'Delete',
+          text: lang.editExpense.deleteBtn,
           style: 'destructive',
           onPress: async () => {
             setDeleting(true);
@@ -130,7 +132,7 @@ export default function EditExpenseModal() {
               await deleteDoc(doc(db, 'expenses', id!));
               router.back();
             } catch {
-              Alert.alert('Error', 'Failed to delete expense.');
+              Alert.alert(lang.common.error, lang.editExpense.failedToDelete);
               setDeleting(false);
             }
           },
@@ -143,13 +145,13 @@ export default function EditExpenseModal() {
     return (
       <SafeAreaView style={styles.root} edges={['top']}>
         <View style={styles.header}>
-          <Text style={styles.title}>Edit Expense</Text>
+          <Text style={styles.title}>{lang.editExpense.title}</Text>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="close" size={24} color="#374151" />
           </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>{lang.common.loading}</Text>
         </View>
       </SafeAreaView>
     );
@@ -159,7 +161,7 @@ export default function EditExpenseModal() {
     <SafeAreaView style={styles.root} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Edit Expense</Text>
+        <Text style={styles.title}>{lang.editExpense.title}</Text>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="close" size={24} color="#374151" />
         </TouchableOpacity>
@@ -176,9 +178,9 @@ export default function EditExpenseModal() {
         >
           {/* Name */}
           <View style={styles.field}>
-            <Text style={styles.label}>Name</Text>
+            <Text style={styles.label}>{lang.addExpense.name}</Text>
             <AppInput
-              placeholder="e.g. Grocery Shopping"
+              placeholder={lang.addExpense.namePlaceholder}
               value={name}
               onChangeText={setName}
             />
@@ -186,7 +188,7 @@ export default function EditExpenseModal() {
 
           {/* Amount */}
           <View style={styles.field}>
-            <Text style={styles.label}>Amount</Text>
+            <Text style={styles.label}>{lang.addExpense.amount}</Text>
             <AppInput
               placeholder="0.00"
               value={amount}
@@ -197,7 +199,7 @@ export default function EditExpenseModal() {
 
           {/* Icon Picker */}
           <View style={styles.field}>
-            <Text style={styles.label}>Icon</Text>
+            <Text style={styles.label}>{lang.addExpense.icon}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -229,24 +231,24 @@ export default function EditExpenseModal() {
             <View style={[styles.checkbox, isPaymentPlan && styles.checkboxChecked]}>
               {isPaymentPlan && <Ionicons name="checkmark" size={14} color="#fff" />}
             </View>
-            <Text style={styles.toggleLabel}>Payment plan</Text>
+            <Text style={styles.toggleLabel}>{lang.addExpense.paymentPlan}</Text>
           </TouchableOpacity>
 
           {isPaymentPlan && (
             <>
               <View style={styles.field}>
-                <Text style={styles.label}>Number of payments</Text>
+                <Text style={styles.label}>{lang.addExpense.numberOfPayments}</Text>
                 <AppInput
-                  placeholder="e.g. 12"
+                  placeholder={lang.addExpense.numberOfPaymentsPlaceholder}
                   value={totalPayments}
                   onChangeText={setTotalPayments}
                   keyboardType="numeric"
                 />
               </View>
               <View style={styles.field}>
-                <Text style={styles.label}>Current payment</Text>
+                <Text style={styles.label}>{lang.addExpense.currentPayment}</Text>
                 <AppInput
-                  placeholder="e.g. 1"
+                  placeholder={lang.addExpense.currentPaymentPlaceholder}
                   value={currentPayment}
                   onChangeText={setCurrentPayment}
                   keyboardType="numeric"
@@ -264,12 +266,12 @@ export default function EditExpenseModal() {
             <View style={[styles.checkbox, active && styles.checkboxChecked]}>
               {active && <Ionicons name="checkmark" size={14} color="#fff" />}
             </View>
-            <Text style={styles.toggleLabel}>Active</Text>
+            <Text style={styles.toggleLabel}>{lang.addExpense.active}</Text>
           </TouchableOpacity>
 
           {/* Save */}
           <AppButton
-            title={saving ? 'Saving...' : 'Save Changes'}
+            title={saving ? lang.editExpense.saving : lang.editExpense.saveBtn}
             variant="primary"
             onPress={handleSave}
             disabled={saving || deleting}
@@ -283,7 +285,7 @@ export default function EditExpenseModal() {
             activeOpacity={0.7}
           >
             <Text style={styles.deleteText}>
-              {deleting ? 'Deleting...' : 'Delete Expense'}
+              {deleting ? lang.editExpense.deleting : lang.editExpense.deleteBtn}
             </Text>
           </TouchableOpacity>
         </ScrollView>

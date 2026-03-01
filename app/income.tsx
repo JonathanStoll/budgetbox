@@ -8,17 +8,19 @@ import { auth, db } from '@/firebaseconfig';
 import { IncomeCard, type Income } from '@/components/general/income-card';
 import { AppButton } from '@/components/general/app-button';
 import { BottomNavBar, type NavTab } from '@/components/general/bottom-nav-bar';
-
-const tabs: NavTab[] = [
-  { key: 'income', label: 'Income', icon: 'arrow-down-outline' },
-  { key: 'expenses', label: 'Expenses', icon: 'arrow-up-outline' },
-  { key: 'home', label: 'Home', icon: 'home' },
-  { key: 'preview', label: 'Preview', icon: 'trending-up-outline' },
-  { key: 'settings', label: 'Settings', icon: 'settings-outline' },
-];
+import { useLanguage } from '@/context/language-context';
 
 export default function IncomeScreen() {
+  const { lang } = useLanguage();
   const [incomeItems, setIncomeItems] = useState<Income[]>([]);
+
+  const tabs: NavTab[] = [
+    { key: 'income', label: lang.nav.income, icon: 'arrow-down-outline' },
+    { key: 'expenses', label: lang.nav.expenses, icon: 'arrow-up-outline' },
+    { key: 'home', label: lang.nav.home, icon: 'home' },
+    { key: 'preview', label: lang.nav.preview, icon: 'trending-up-outline' },
+    { key: 'settings', label: lang.nav.settings, icon: 'settings-outline' },
+  ];
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
@@ -71,14 +73,14 @@ export default function IncomeScreen() {
     <SafeAreaView style={styles.root} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Income</Text>
+        <Text style={styles.title}>{lang.income.title}</Text>
       </View>
 
       {/* Content */}
       <View style={styles.content}>
         {incomeItems.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No income yet</Text>
+            <Text style={styles.emptyText}>{lang.income.noIncome}</Text>
           </View>
         ) : (
           <FlatList
@@ -100,7 +102,7 @@ export default function IncomeScreen() {
       {/* Add Income button */}
       <View style={styles.buttonContainer}>
         <AppButton
-          title="Add Income"
+          title={lang.income.addIncome}
           variant="primary"
           onPress={() => router.push('/add-income-modal')}
         />

@@ -18,12 +18,14 @@ import { Calendar } from 'react-native-calendars';
 import { db } from '@/firebaseconfig';
 import { AppInput } from '@/components/general/app-input';
 import { AppButton } from '@/components/general/app-button';
+import { useLanguage } from '@/context/language-context';
 
 function toDateString(year: number, month: number, day: number): string {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 export default function EditIncomeModal() {
+  const { lang } = useLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const [name, setName] = useState('');
@@ -39,7 +41,7 @@ export default function EditIncomeModal() {
     async function fetchIncome() {
       const snap = await getDoc(doc(db, 'income', id!));
       if (!snap.exists()) {
-        Alert.alert('Error', 'Income not found.');
+        Alert.alert(lang.common.error, lang.editIncome.notFound);
         router.back();
         return;
       }
@@ -62,11 +64,11 @@ export default function EditIncomeModal() {
     const parsedAmount = parseFloat(amount);
 
     if (!trimmedName) {
-      Alert.alert('Validation', 'Please enter a name.');
+      Alert.alert(lang.common.validation, lang.editIncome.pleaseEnterName);
       return;
     }
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      Alert.alert('Validation', 'Please enter a valid amount.');
+      Alert.alert(lang.common.validation, lang.editIncome.pleaseEnterAmount);
       return;
     }
 
@@ -83,7 +85,7 @@ export default function EditIncomeModal() {
       });
       router.back();
     } catch {
-      Alert.alert('Error', 'Failed to save changes. Please try again.');
+      Alert.alert(lang.common.error, lang.editIncome.failedToSave);
     } finally {
       setSaving(false);
     }
@@ -91,12 +93,12 @@ export default function EditIncomeModal() {
 
   function handleDelete() {
     Alert.alert(
-      'Delete Income',
-      'Are you sure you want to delete this income? This cannot be undone.',
+      lang.editIncome.deleteConfirmTitle,
+      lang.editIncome.deleteConfirmMsg,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: lang.common.cancel, style: 'cancel' },
         {
-          text: 'Delete',
+          text: lang.editIncome.deleteBtn,
           style: 'destructive',
           onPress: async () => {
             setDeleting(true);
@@ -104,7 +106,7 @@ export default function EditIncomeModal() {
               await deleteDoc(doc(db, 'income', id!));
               router.back();
             } catch {
-              Alert.alert('Error', 'Failed to delete income.');
+              Alert.alert(lang.common.error, lang.editIncome.failedToDelete);
               setDeleting(false);
             }
           },
@@ -117,13 +119,13 @@ export default function EditIncomeModal() {
     return (
       <SafeAreaView style={styles.root} edges={['top']}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Edit Income</Text>
+          <Text style={styles.headerTitle}>{lang.editIncome.title}</Text>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="close" size={24} color="#374151" />
           </TouchableOpacity>
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>{lang.common.loading}</Text>
         </View>
       </SafeAreaView>
     );
@@ -133,7 +135,7 @@ export default function EditIncomeModal() {
     <SafeAreaView style={styles.root} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Edit Income</Text>
+        <Text style={styles.headerTitle}>{lang.editIncome.title}</Text>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="close" size={24} color="#374151" />
         </TouchableOpacity>
@@ -150,9 +152,9 @@ export default function EditIncomeModal() {
         >
           {/* Name */}
           <View style={styles.field}>
-            <Text style={styles.label}>Name</Text>
+            <Text style={styles.label}>{lang.addIncome.name}</Text>
             <AppInput
-              placeholder="e.g. Salary"
+              placeholder={lang.addIncome.namePlaceholder}
               value={name}
               onChangeText={setName}
             />
@@ -160,7 +162,7 @@ export default function EditIncomeModal() {
 
           {/* Amount */}
           <View style={styles.field}>
-            <Text style={styles.label}>Amount</Text>
+            <Text style={styles.label}>{lang.addIncome.amount}</Text>
             <AppInput
               placeholder="0.00"
               value={amount}
@@ -171,7 +173,7 @@ export default function EditIncomeModal() {
 
           {/* Date Picker */}
           <View style={styles.field}>
-            <Text style={styles.label}>Date</Text>
+            <Text style={styles.label}>{lang.addIncome.date}</Text>
             <Calendar
               current={selectedDate}
               onDayPress={(day: { dateString: string }) => setSelectedDate(day.dateString)}
@@ -191,7 +193,7 @@ export default function EditIncomeModal() {
 
           {/* Save */}
           <AppButton
-            title={saving ? 'Saving...' : 'Save Changes'}
+            title={saving ? lang.editIncome.saving : lang.editIncome.saveBtn}
             variant="primary"
             onPress={handleSave}
             disabled={saving || deleting}
@@ -205,7 +207,7 @@ export default function EditIncomeModal() {
             activeOpacity={0.7}
           >
             <Text style={styles.deleteText}>
-              {deleting ? 'Deleting...' : 'Delete Income'}
+              {deleting ? lang.editIncome.deleting : lang.editIncome.deleteBtn}
             </Text>
           </TouchableOpacity>
         </ScrollView>

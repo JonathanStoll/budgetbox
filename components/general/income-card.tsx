@@ -1,4 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useLanguage } from '@/context/language-context';
 
 export type Income = {
   id: string;
@@ -8,19 +9,15 @@ export type Income = {
   year: number;
 };
 
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
 type IncomeCardProps = {
   income: Income;
   onPress?: () => void;
 };
 
 export function IncomeCard({ income, onPress }: IncomeCardProps) {
+  const { lang } = useLanguage();
   const { name, amount, month, year } = income;
-  const subtitle = `${MONTH_NAMES[month - 1]} ${year}`;
+  const subtitle = `${lang.months[month - 1]} ${year}`;
 
   const card = (
     <View style={styles.card}>

@@ -19,14 +19,7 @@ import { SummaryCard } from '@/components/general/summary-card';
 import { ExpenseCard, type Expense } from '@/components/general/expense-card';
 import { BottomNavBar, type NavTab } from '@/components/general/bottom-nav-bar';
 import { Fab } from '@/components/general/fab';
-
-const tabs: NavTab[] = [
-  { key: 'income', label: 'Income', icon: 'arrow-down-outline' },
-  { key: 'expenses', label: 'Expenses', icon: 'arrow-up-outline' },
-  { key: 'home', label: 'Home', icon: 'home' },
-  { key: 'preview', label: 'Preview', icon: 'trending-up-outline' },
-  { key: 'settings', label: 'Settings', icon: 'settings-outline' },
-];
+import { useLanguage } from '@/context/language-context';
 
 type BudgetExpense = {
   expenseId: string;
@@ -124,10 +117,19 @@ async function buildBudgetData(uid: string, month: number, year: number, existin
 }
 
 export default function HomeScreen() {
+  const { lang } = useLanguage();
   const [budgetId, setBudgetId] = useState<string | null>(null);
   const [budget, setBudget] = useState<BudgetDoc | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
+
+  const tabs: NavTab[] = [
+    { key: 'income', label: lang.nav.income, icon: 'arrow-down-outline' },
+    { key: 'expenses', label: lang.nav.expenses, icon: 'arrow-up-outline' },
+    { key: 'home', label: lang.nav.home, icon: 'home' },
+    { key: 'preview', label: lang.nav.preview, icon: 'trending-up-outline' },
+    { key: 'settings', label: lang.nav.settings, icon: 'settings-outline' },
+  ];
 
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
@@ -188,7 +190,7 @@ export default function HomeScreen() {
           setLoading(false);
         });
       } catch {
-        Alert.alert('Error', 'Failed to load budget.');
+        Alert.alert(lang.common.error, lang.home.failedToLoad);
         setLoading(false);
       }
     })();
@@ -240,7 +242,7 @@ export default function HomeScreen() {
         });
       }
     } catch {
-      Alert.alert('Error', 'Failed to update expense.');
+      Alert.alert(lang.common.error, lang.home.failedToUpdate);
     }
   }
 
@@ -265,11 +267,7 @@ export default function HomeScreen() {
     setActiveTab(key);
   }
 
-  const MONTH_NAMES = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ];
-  const monthYearLabel = `${MONTH_NAMES[currentMonth - 1]} ${currentYear}`;
+  const monthYearLabel = `${lang.months[currentMonth - 1]} ${currentYear}`;
 
   const budgetExpensesAsCards: Expense[] = (budget?.expenses ?? []).map((e) => ({
     id: e.expenseId,
@@ -293,28 +291,28 @@ export default function HomeScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.summaryRow}>
-          <SummaryCard label="Income" amount={formatCurrency(totalIncome)} variant="income" />
+          <SummaryCard label={lang.preview.income} amount={formatCurrency(totalIncome)} variant="income" />
           <View style={{ width: 12 }} />
-          <SummaryCard label="Expenses" amount={formatCurrency(totalExpenses)} variant="expense" />
+          <SummaryCard label={lang.preview.expenses} amount={formatCurrency(totalExpenses)} variant="expense" />
         </View>
         <View style={styles.summaryRow}>
-          <SummaryCard label="Balance" amount={formatCurrency(balance)} variant="balance" />
+          <SummaryCard label={lang.preview.balance} amount={formatCurrency(balance)} variant="balance" />
           <View style={{ width: 12 }} />
-          <SummaryCard label="Budget" amount={monthYearLabel} variant="date" />
+          <SummaryCard label={lang.preview.budget} amount={monthYearLabel} variant="date" />
         </View>
       </View>
 
       {/* Budget expense list */}
       <View style={styles.listSection}>
-        <Text style={styles.sectionTitle}>Monthly Budget</Text>
+        <Text style={styles.sectionTitle}>{lang.home.monthlyBudget}</Text>
 
         {loading ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>Loading...</Text>
+            <Text style={styles.emptyText}>{lang.common.loading}</Text>
           </View>
         ) : budgetExpensesAsCards.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No expenses in this month's budget</Text>
+            <Text style={styles.emptyText}>{lang.home.noExpenses}</Text>
           </View>
         ) : (
           <FlatList

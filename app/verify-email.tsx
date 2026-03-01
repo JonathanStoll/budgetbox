@@ -13,8 +13,11 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 import { auth, db } from '@/firebaseconfig';
 import { AppButton } from '@/components/general/app-button';
+import { useLanguage } from '@/context/language-context';
 
 export default function VerifyEmailScreen() {
+  const { lang } = useLanguage();
+
   const [checking, setChecking] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -71,13 +74,11 @@ export default function VerifyEmailScreen() {
         router.replace('/hello');
       } else {
         setStatusIsError(true);
-        setStatusMessage(
-          "Your email hasn't been verified yet. Please check your inbox and click the link."
-        );
+        setStatusMessage(lang.verifyEmail.notVerifiedYet);
       }
     } catch (error: any) {
       setStatusIsError(true);
-      setStatusMessage('Something went wrong. Please try again.');
+      setStatusMessage(lang.common.somethingWentWrong);
     } finally {
       setChecking(false);
     }
@@ -96,15 +97,15 @@ export default function VerifyEmailScreen() {
     try {
       await sendEmailVerification(user);
       setStatusIsError(false);
-      setStatusMessage('Verification email sent. Check your inbox.');
+      setStatusMessage(lang.verifyEmail.verificationSent);
       startCooldown();
     } catch (error: any) {
       setStatusIsError(true);
       const code = error?.code as string | undefined;
       if (code === 'auth/too-many-requests') {
-        setStatusMessage('Too many attempts. Please wait before resending.');
+        setStatusMessage(lang.verifyEmail.tooManyAttempts);
       } else {
-        setStatusMessage('Failed to resend the verification email. Please try again.');
+        setStatusMessage(lang.verifyEmail.failedToResend);
       }
     } finally {
       setResending(false);
@@ -130,16 +131,14 @@ export default function VerifyEmailScreen() {
           <View style={styles.logoBox}>
             <Ionicons name="wallet-outline" size={28} color="#fff" />
           </View>
-          <Text style={styles.appName}>BudgetPro</Text>
-          <Text style={styles.tagline}>Smart budgeting made simple</Text>
+          <Text style={styles.appName}>{lang.login.appName}</Text>
+          <Text style={styles.tagline}>{lang.login.tagline}</Text>
         </View>
 
         {/* Content */}
         <View style={styles.contentSection}>
-          <Text style={styles.heading}>Verify your email</Text>
-          <Text style={styles.subheading}>
-            {`We sent a verification link to ${userEmail}.\nClick the link in that email, then tap the button below.`}
-          </Text>
+          <Text style={styles.heading}>{lang.verifyEmail.title}</Text>
+          <Text style={styles.subheading}>{lang.verifyEmail.message(userEmail)}</Text>
 
           {/* Status message area — minHeight prevents layout shift */}
           <View style={styles.statusArea}>
@@ -153,7 +152,7 @@ export default function VerifyEmailScreen() {
           {/* Primary action */}
           <View style={styles.buttonWrapper}>
             <AppButton
-              title={checking ? '' : "I've verified — continue"}
+              title={checking ? '' : lang.verifyEmail.continueBtn}
               onPress={handleContinue}
               disabled={checking}
               accessibilityLabel="I've verified, continue to app"
@@ -172,8 +171,8 @@ export default function VerifyEmailScreen() {
                 resending
                   ? ''
                   : resendCooldown > 0
-                    ? `Resend in ${resendCooldown}s`
-                    : 'Resend email'
+                    ? lang.verifyEmail.resendIn(resendCooldown)
+                    : lang.verifyEmail.resendEmail
               }
               onPress={handleResend}
               disabled={resending || resendCooldown > 0}
@@ -197,7 +196,7 @@ export default function VerifyEmailScreen() {
           accessibilityLabel="Sign out"
           accessibilityRole="button"
         >
-          <Text style={styles.signOutText}>Sign out</Text>
+          <Text style={styles.signOutText}>{lang.verifyEmail.signOut}</Text>
         </TouchableOpacity>
       </View>
     </View>

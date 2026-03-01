@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLanguage } from '@/context/language-context';
 
 export type Expense = {
   id: string;
@@ -23,6 +24,7 @@ type ExpenseCardProps = {
 };
 
 export function ExpenseCard({ expense, onToggle, onPress }: ExpenseCardProps) {
+  const { lang } = useLanguage();
   const { id, title, category, amount, checked, icon, iconBgColor, isPaymentPlan, currentPayment, totalPayments, active } = expense;
   const borderColor = active === false ? '#d1d5db' : '#22c55e';
 
@@ -34,7 +36,7 @@ export function ExpenseCard({ expense, onToggle, onPress }: ExpenseCardProps) {
     currentPayment >= totalPayments;
 
   const subtitle = isPaymentPlan
-    ? `${currentPayment}/${totalPayments} payments`
+    ? lang.expenseCard.payments(currentPayment ?? 0, totalPayments ?? 0)
     : category;
 
   const cardContent = (

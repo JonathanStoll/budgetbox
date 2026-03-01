@@ -18,6 +18,7 @@ import { Calendar } from 'react-native-calendars';
 import { auth, db } from '@/firebaseconfig';
 import { AppInput } from '@/components/general/app-input';
 import { AppButton } from '@/components/general/app-button';
+import { useLanguage } from '@/context/language-context';
 
 function toDateString(date: Date): string {
   const y = date.getFullYear();
@@ -27,6 +28,7 @@ function toDateString(date: Date): string {
 }
 
 export default function AddIncomeModal() {
+  const { lang } = useLanguage();
   const now = new Date();
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
@@ -38,17 +40,17 @@ export default function AddIncomeModal() {
     const parsedAmount = parseFloat(amount);
 
     if (!trimmedName) {
-      Alert.alert('Validation', 'Please enter a name.');
+      Alert.alert(lang.common.validation, lang.addIncome.pleaseEnterName);
       return;
     }
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      Alert.alert('Validation', 'Please enter a valid amount.');
+      Alert.alert(lang.common.validation, lang.addIncome.pleaseEnterAmount);
       return;
     }
 
     const uid = auth.currentUser?.uid;
     if (!uid) {
-      Alert.alert('Error', 'You must be logged in.');
+      Alert.alert(lang.common.error, lang.addIncome.mustBeLoggedIn);
       return;
     }
 
@@ -67,7 +69,7 @@ export default function AddIncomeModal() {
       });
       router.back();
     } catch {
-      Alert.alert('Error', 'Failed to create income. Please try again.');
+      Alert.alert(lang.common.error, lang.addIncome.failedToCreate);
     } finally {
       setLoading(false);
     }
@@ -77,7 +79,7 @@ export default function AddIncomeModal() {
     <SafeAreaView style={styles.root} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Add Income</Text>
+        <Text style={styles.headerTitle}>{lang.addIncome.title}</Text>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="close" size={24} color="#374151" />
         </TouchableOpacity>
@@ -94,9 +96,9 @@ export default function AddIncomeModal() {
         >
           {/* Name */}
           <View style={styles.field}>
-            <Text style={styles.label}>Name</Text>
+            <Text style={styles.label}>{lang.addIncome.name}</Text>
             <AppInput
-              placeholder="e.g. Salary"
+              placeholder={lang.addIncome.namePlaceholder}
               value={name}
               onChangeText={setName}
             />
@@ -104,7 +106,7 @@ export default function AddIncomeModal() {
 
           {/* Amount */}
           <View style={styles.field}>
-            <Text style={styles.label}>Amount</Text>
+            <Text style={styles.label}>{lang.addIncome.amount}</Text>
             <AppInput
               placeholder="0.00"
               value={amount}
@@ -115,7 +117,7 @@ export default function AddIncomeModal() {
 
           {/* Date Picker */}
           <View style={styles.field}>
-            <Text style={styles.label}>Date</Text>
+            <Text style={styles.label}>{lang.addIncome.date}</Text>
             <Calendar
               current={selectedDate}
               onDayPress={(day: { dateString: string }) => setSelectedDate(day.dateString)}
@@ -135,7 +137,7 @@ export default function AddIncomeModal() {
 
           {/* Submit */}
           <AppButton
-            title={loading ? 'Creating...' : 'Create Income'}
+            title={loading ? lang.addIncome.creating : lang.addIncome.createBtn}
             variant="primary"
             onPress={handleCreate}
             disabled={loading}

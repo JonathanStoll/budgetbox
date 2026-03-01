@@ -8,17 +8,19 @@ import { auth, db } from '@/firebaseconfig';
 import { ExpenseCard, type Expense } from '@/components/general/expense-card';
 import { AppButton } from '@/components/general/app-button';
 import { BottomNavBar, type NavTab } from '@/components/general/bottom-nav-bar';
-
-const tabs: NavTab[] = [
-  { key: 'income', label: 'Income', icon: 'arrow-down-outline' },
-  { key: 'expenses', label: 'Expenses', icon: 'arrow-up-outline' },
-  { key: 'home', label: 'Home', icon: 'home' },
-  { key: 'preview', label: 'Preview', icon: 'trending-up-outline' },
-  { key: 'settings', label: 'Settings', icon: 'settings-outline' },
-];
+import { useLanguage } from '@/context/language-context';
 
 export default function ExpensesScreen() {
+  const { lang } = useLanguage();
   const [expenses, setExpenses] = useState<Expense[]>([]);
+
+  const tabs: NavTab[] = [
+    { key: 'income', label: lang.nav.income, icon: 'arrow-down-outline' },
+    { key: 'expenses', label: lang.nav.expenses, icon: 'arrow-up-outline' },
+    { key: 'home', label: lang.nav.home, icon: 'home' },
+    { key: 'preview', label: lang.nav.preview, icon: 'trending-up-outline' },
+    { key: 'settings', label: lang.nav.settings, icon: 'settings-outline' },
+  ];
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
@@ -76,14 +78,14 @@ export default function ExpensesScreen() {
     <SafeAreaView style={styles.root} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Expenses</Text>
+        <Text style={styles.title}>{lang.expenses.title}</Text>
       </View>
 
       {/* Content */}
       <View style={styles.content}>
         {expenses.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No expenses yet</Text>
+            <Text style={styles.emptyText}>{lang.expenses.noExpenses}</Text>
           </View>
         ) : (
           <FlatList
@@ -105,7 +107,7 @@ export default function ExpensesScreen() {
       {/* Add Expense button */}
       <View style={styles.buttonContainer}>
         <AppButton
-          title="Add Expense"
+          title={lang.expenses.addExpense}
           variant="primary"
           onPress={() => router.push('/add-expense-modal')}
         />
