@@ -79,12 +79,24 @@ async function buildBudgetData(uid: string, month: number, year: number, existin
     }
   }
 
+  // Collect completed payment plans that were never explicitly deactivated
+  const toDeactivate: string[] = [];
+
   const budgetExpenses: BudgetExpense[] = expensesSnap.docs
     .filter((d) => {
       const data = d.data();
       if (data.active === false) return false;
       // Payment plans starting at 0 don't appear until next month
       if (data.isPaymentPlan && (data.currentPayment ?? 0) === 0) return false;
+      // Payment plan that has reached or exceeded its total — auto-deactivate
+      if (
+        data.isPaymentPlan &&
+        (data.totalPayments ?? 0) > 0 &&
+        (data.currentPayment ?? 0) >= (data.totalPayments ?? 0)
+      ) {
+        toDeactivate.push(d.id);
+        return false;
+      }
       return true;
     })
     .map((d) => {
@@ -101,6 +113,13 @@ async function buildBudgetData(uid: string, month: number, year: number, existin
         totalPayments: data.totalPayments ?? null,
       };
     });
+
+  // Persist deactivation so these expenses don't resurface next sync
+  if (toDeactivate.length > 0) {
+    await Promise.all(
+      toDeactivate.map((id) => updateDoc(doc(db, 'expenses', id), { active: false })),
+    );
+  }
 
   const totalIncome = incomeSnap.docs.reduce(
     (sum, d) => sum + (d.data().amount as number),
@@ -150,6 +169,40 @@ export default function HomeScreen() {
     const existingExpenses = existingDoc
       ? (existingDoc.data().expenses as BudgetExpense[] | undefined)
       : undefined;
+
+    // First time opening a new month: advance payment plans that were paid last month
+    if (budgetSnap.empty) {
+      const prevDate = new Date(year, month - 2, 1);
+      const prevMonth = prevDate.getMonth() + 1;
+      const prevYear = prevDate.getFullYear();
+
+      const prevBudgetSnap = await getDocs(
+        query(
+          collection(db, 'budgets'),
+          where('userId', '==', uid),
+          where('month', '==', prevMonth),
+          where('year', '==', prevYear),
+        ),
+      );
+
+      if (!prevBudgetSnap.empty) {
+        const prevExpenses = (prevBudgetSnap.docs[0].data().expenses as BudgetExpense[]) ?? [];
+        const paidPlans = prevExpenses.filter((e) => e.isPaymentPlan && e.paid);
+
+        if (paidPlans.length > 0) {
+          await Promise.all(
+            paidPlans.map((e) => {
+              const newCurrent = (e.currentPayment ?? 0) + 1;
+              const update: Record<string, unknown> = { currentPayment: newCurrent };
+              if (newCurrent >= (e.totalPayments ?? 0)) {
+                update.active = false;
+              }
+              return updateDoc(doc(db, 'expenses', e.expenseId), update);
+            }),
+          );
+        }
+      }
+    }
 
     // Build fresh data from expenses + income collections
     const freshData = await buildBudgetData(uid, month, year, existingExpenses);
@@ -212,35 +265,9 @@ export default function HomeScreen() {
     updatedExpenses[idx] = { ...budgetExpense, paid: newPaid };
 
     try {
-      // Update budget doc
       await updateDoc(doc(db, 'budgets', budgetId), {
         expenses: updatedExpenses,
       });
-
-      // If payment plan and marking as paid, advance the original expense
-      if (budgetExpense.isPaymentPlan && newPaid) {
-        const currentPay = (budgetExpense.currentPayment ?? 0) + 1;
-        const totalPay = budgetExpense.totalPayments ?? 0;
-
-        const expenseUpdate: Record<string, unknown> = {
-          currentPayment: currentPay,
-        };
-
-        if (currentPay >= totalPay) {
-          expenseUpdate.active = false;
-        }
-
-        await updateDoc(doc(db, 'expenses', budgetExpense.expenseId), expenseUpdate);
-
-        // Also update the budget expense entry to reflect the new payment count
-        updatedExpenses[idx] = {
-          ...updatedExpenses[idx],
-          currentPayment: currentPay,
-        };
-        await updateDoc(doc(db, 'budgets', budgetId), {
-          expenses: updatedExpenses,
-        });
-      }
     } catch {
       Alert.alert(lang.common.error, lang.home.failedToUpdate);
     }

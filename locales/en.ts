@@ -94,6 +94,7 @@ export const en = {
   preview: {
     current: 'Current',
     predicted: 'Predicted',
+    past: 'Past',
     income: 'Income',
     expenses: 'Expenses',
     balance: 'Balance',
@@ -102,6 +103,7 @@ export const en = {
     monthlyBudget: 'Monthly Budget',
     predictedExpenses: 'Predicted Expenses',
     noExpenses: 'No expenses for this month',
+    noBudgetHistory: 'No more budgets past this point',
     failedToLoad: 'Failed to load preview data.',
     pdfTitle: 'Budget Preview',
     pdfFailed: 'Failed to generate PDF.',

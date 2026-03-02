@@ -97,6 +97,7 @@ export const es: Translations = {
   preview: {
     current: 'Actual',
     predicted: 'Predicho',
+    past: 'Pasado',
     income: 'Ingresos',
     expenses: 'Gastos',
     balance: 'Balance',
@@ -105,6 +106,7 @@ export const es: Translations = {
     monthlyBudget: 'Presupuesto mensual',
     predictedExpenses: 'Gastos predichos',
     noExpenses: 'No hay gastos para este mes',
+    noBudgetHistory: 'No hay más presupuestos anteriores a este punto',
     failedToLoad: 'No se pudo cargar la vista previa.',
     pdfTitle: 'Vista previa del presupuesto',
     pdfFailed: 'No se pudo generar el PDF.',

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Alert, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,6 +51,7 @@ export default function PreviewScreen() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [noBudgetFound, setNoBudgetFound] = useState(false);
 
   const tabs: NavTab[] = [
     { key: 'income', label: lang.nav.income, icon: 'arrow-down-outline' },
@@ -68,6 +69,7 @@ export default function PreviewScreen() {
     if (!uid) return;
 
     setLoading(true);
+    setNoBudgetFound(false);
 
     try {
       if (monthOffset === 0) {
@@ -106,6 +108,45 @@ export default function PreviewScreen() {
           setTotalIncome(0);
           setTotalExpenses(0);
           setBalance(0);
+        }
+      } else if (monthOffset < 0) {
+        // Past month: load the saved budget doc from Firestore.
+        const budgetSnap = await getDocs(
+          query(
+            collection(db, 'budgets'),
+            where('userId', '==', uid),
+            where('month', '==', month),
+            where('year', '==', year),
+          ),
+        );
+
+        if (budgetSnap.empty) {
+          // No saved budget exists for this month — tell the user.
+          setNoBudgetFound(true);
+          setExpenses([]);
+          setTotalIncome(0);
+          setTotalExpenses(0);
+          setBalance(0);
+        } else {
+          const data = budgetSnap.docs[0].data();
+          const budgetExpenses = (data.expenses as BudgetExpense[]) ?? [];
+
+          setExpenses(
+            budgetExpenses.map((e) => ({
+              id: e.expenseId,
+              title: e.title,
+              category: '',
+              amount: e.amount,
+              icon: e.icon as Expense['icon'],
+              iconBgColor: e.iconBgColor,
+              isPaymentPlan: e.isPaymentPlan,
+              currentPayment: e.currentPayment ?? undefined,
+              totalPayments: e.totalPayments ?? undefined,
+            })),
+          );
+          setTotalIncome(data.totalIncome as number);
+          setTotalExpenses(data.totalExpenses as number);
+          setBalance(data.balance as number);
         }
       } else {
         // Future month: build predictive data
@@ -169,7 +210,6 @@ export default function PreviewScreen() {
             });
           } else {
             // Regular expense — always included if active
-            // Skip payment plans at currentPayment == 0 for non-payment-plan check
             if ((d.currentPayment ?? 0) === 0 && d.isPaymentPlan) continue;
 
             predictedExpenses.push({
@@ -225,9 +265,11 @@ export default function PreviewScreen() {
     }
   }
 
-  // Pie chart data
+  // Pie chart data — top 5 by amount
   const pieData = expenses
     .filter((e) => e.amount > 0)
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5)
     .map((e, i) => ({
       name: e.title,
       amount: e.amount,
@@ -310,23 +352,21 @@ export default function PreviewScreen() {
       <View style={styles.header}>
         <View style={styles.navRow}>
           <TouchableOpacity
-            onPress={() => setMonthOffset((o) => Math.max(0, o - 1))}
-            disabled={monthOffset === 0}
+            onPress={() => setMonthOffset((o) => o - 1)}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name="chevron-back"
-              size={24}
-              color={monthOffset === 0 ? '#d1d5db' : '#1f2937'}
-            />
+            <Ionicons name="chevron-back" size={24} color="#1f2937" />
           </TouchableOpacity>
 
           <View style={styles.monthLabel}>
             <Text style={styles.monthText}>{monthYearLabel}</Text>
+            {monthOffset < 0 && (
+              <Text style={styles.pastTag}>{lang.preview.past}</Text>
+            )}
             {monthOffset === 0 && (
               <Text style={styles.currentTag}>{lang.preview.current}</Text>
             )}
-            {monthOffset >= 1 && (
+            {monthOffset > 0 && (
               <Text style={styles.predictedTag}>{lang.preview.predicted}</Text>
             )}
           </View>
@@ -382,12 +422,17 @@ export default function PreviewScreen() {
 
         {/* Expense list */}
         <Text style={styles.sectionTitle}>
-          {monthOffset === 0 ? lang.preview.monthlyBudget : lang.preview.predictedExpenses}
+          {monthOffset > 0 ? lang.preview.predictedExpenses : lang.preview.monthlyBudget}
         </Text>
 
         {loading ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>{lang.common.loading}</Text>
+            <ActivityIndicator size="large" color="#0066ff" />
+          </View>
+        ) : noBudgetFound ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="archive-outline" size={48} color="#d1d5db" style={styles.emptyIcon} />
+            <Text style={styles.emptyText}>{lang.preview.noBudgetHistory}</Text>
           </View>
         ) : expenses.length === 0 ? (
           <View style={styles.emptyState}>
@@ -449,6 +494,12 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     letterSpacing: -0.5,
   },
+  pastTag: {
+    fontSize: 11,
+    color: '#9ca3af',
+    fontWeight: '500',
+    marginTop: 2,
+  },
   currentTag: {
     fontSize: 11,
     color: '#16a34a',
@@ -495,8 +546,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 48,
   },
+  emptyIcon: {
+    marginBottom: 12,
+  },
   emptyText: {
     fontSize: 16,
     color: '#6b7280',
+    textAlign: 'center',
   },
 });
