@@ -92,7 +92,7 @@ async function buildBudgetData(uid: string, month: number, year: number, existin
       if (
         data.isPaymentPlan &&
         (data.totalPayments ?? 0) > 0 &&
-        (data.currentPayment ?? 0) >= (data.totalPayments ?? 0)
+        (data.currentPayment ?? 0) > (data.totalPayments ?? 0)
       ) {
         toDeactivate.push(d.id);
         return false;
@@ -194,7 +194,7 @@ export default function HomeScreen() {
             paidPlans.map((e) => {
               const newCurrent = (e.currentPayment ?? 0) + 1;
               const update: Record<string, unknown> = { currentPayment: newCurrent };
-              if (newCurrent >= (e.totalPayments ?? 0)) {
+              if (newCurrent > (e.totalPayments ?? 0)) {
                 update.active = false;
               }
               return updateDoc(doc(db, 'expenses', e.expenseId), update);

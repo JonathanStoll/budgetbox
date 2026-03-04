@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.BudgetApp"
     },
     "web": {
       "output": "static",
@@ -38,12 +39,17 @@
             "backgroundColor": "#000000"
           }
         }
-      ],
-      
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "294faaac-3aa4-4c4d-b6ad-23828827c260"
+      }
     }
   }
 }
