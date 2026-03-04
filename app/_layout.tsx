@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { LanguageProvider } from '@/context/language-context';
+import { AppDataProvider } from '@/context/app-data-context';
 
 export const unstable_settings = {
   initialRouteName: 'index',
@@ -15,6 +16,7 @@ export default function RootLayout() {
 
   return (
     <LanguageProvider>
+    <AppDataProvider>
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -32,6 +34,7 @@ export default function RootLayout() {
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
+    </AppDataProvider>
     </LanguageProvider>
   );
 }

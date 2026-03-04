@@ -1,47 +1,16 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import {
-  addDoc,
-  collection,
-  doc,
-  getDocs,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 
-import { auth, db } from '@/firebaseconfig';
+import { db } from '@/firebaseconfig';
 import { SummaryCard } from '@/components/general/summary-card';
 import { ExpenseCard, type Expense } from '@/components/general/expense-card';
 import { BottomNavBar, type NavTab } from '@/components/general/bottom-nav-bar';
 import { Fab } from '@/components/general/fab';
 import { useLanguage } from '@/context/language-context';
-
-type BudgetExpense = {
-  expenseId: string;
-  title: string;
-  amount: number;
-  icon: string;
-  iconBgColor: string;
-  paid: boolean;
-  isPaymentPlan: boolean;
-  currentPayment: number | null;
-  totalPayments: number | null;
-};
-
-type BudgetDoc = {
-  userId: string;
-  month: number;
-  year: number;
-  expenses: BudgetExpense[];
-  totalIncome: number;
-  totalExpenses: number;
-  balance: number;
-};
+import { useAppData } from '@/context/app-data-context';
 
 function formatCurrency(value: number): string {
   return (
@@ -53,93 +22,9 @@ function formatCurrency(value: number): string {
   );
 }
 
-/** Fetch active expenses and income for the month, build/rebuild the budget doc. */
-async function buildBudgetData(uid: string, month: number, year: number, existingExpenses?: BudgetExpense[]) {
-  const expensesQuery = query(
-    collection(db, 'expenses'),
-    where('userId', '==', uid),
-  );
-  const incomeQuery = query(
-    collection(db, 'income'),
-    where('userId', '==', uid),
-    where('month', '==', month),
-    where('year', '==', year),
-  );
-
-  const [expensesSnap, incomeSnap] = await Promise.all([
-    getDocs(expensesQuery),
-    getDocs(incomeQuery),
-  ]);
-
-  // Build a map of existing paid statuses so we preserve them on refresh
-  const paidMap = new Map<string, boolean>();
-  if (existingExpenses) {
-    for (const e of existingExpenses) {
-      paidMap.set(e.expenseId, e.paid);
-    }
-  }
-
-  // Collect completed payment plans that were never explicitly deactivated
-  const toDeactivate: string[] = [];
-
-  const budgetExpenses: BudgetExpense[] = expensesSnap.docs
-    .filter((d) => {
-      const data = d.data();
-      if (data.active === false) return false;
-      // Payment plans starting at 0 don't appear until next month
-      if (data.isPaymentPlan && (data.currentPayment ?? 0) === 0) return false;
-      // Payment plan that has reached or exceeded its total — auto-deactivate
-      if (
-        data.isPaymentPlan &&
-        (data.totalPayments ?? 0) > 0 &&
-        (data.currentPayment ?? 0) > (data.totalPayments ?? 0)
-      ) {
-        toDeactivate.push(d.id);
-        return false;
-      }
-      return true;
-    })
-    .map((d) => {
-      const data = d.data();
-      return {
-        expenseId: d.id,
-        title: data.title as string,
-        amount: data.amount as number,
-        icon: data.icon as string,
-        iconBgColor: data.iconBgColor as string,
-        paid: paidMap.get(d.id) ?? false,
-        isPaymentPlan: data.isPaymentPlan ?? false,
-        currentPayment: data.currentPayment ?? null,
-        totalPayments: data.totalPayments ?? null,
-      };
-    });
-
-  // Persist deactivation so these expenses don't resurface next sync
-  if (toDeactivate.length > 0) {
-    await Promise.all(
-      toDeactivate.map((id) => updateDoc(doc(db, 'expenses', id), { active: false })),
-    );
-  }
-
-  const totalIncome = incomeSnap.docs.reduce(
-    (sum, d) => sum + (d.data().amount as number),
-    0,
-  );
-  const totalExpenses = budgetExpenses.reduce((sum, e) => sum + e.amount, 0);
-
-  return {
-    expenses: budgetExpenses,
-    totalIncome,
-    totalExpenses,
-    balance: totalIncome - totalExpenses,
-  };
-}
-
 export default function HomeScreen() {
   const { lang } = useLanguage();
-  const [budgetId, setBudgetId] = useState<string | null>(null);
-  const [budget, setBudget] = useState<BudgetDoc | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { budget, budgetId, loadingBudget } = useAppData();
   const [activeTab, setActiveTab] = useState('home');
 
   const tabs: NavTab[] = [
@@ -153,103 +38,6 @@ export default function HomeScreen() {
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
-
-  const syncBudget = useCallback(async (uid: string, month: number, year: number) => {
-    // Find existing budget doc for this month
-    const budgetQuery = query(
-      collection(db, 'budgets'),
-      where('userId', '==', uid),
-      where('month', '==', month),
-      where('year', '==', year),
-    );
-    const budgetSnap = await getDocs(budgetQuery);
-
-    // Get existing expenses (to preserve paid status)
-    const existingDoc = budgetSnap.empty ? null : budgetSnap.docs[0];
-    const existingExpenses = existingDoc
-      ? (existingDoc.data().expenses as BudgetExpense[] | undefined)
-      : undefined;
-
-    // First time opening a new month: advance payment plans that were paid last month
-    if (budgetSnap.empty) {
-      const prevDate = new Date(year, month - 2, 1);
-      const prevMonth = prevDate.getMonth() + 1;
-      const prevYear = prevDate.getFullYear();
-
-      const prevBudgetSnap = await getDocs(
-        query(
-          collection(db, 'budgets'),
-          where('userId', '==', uid),
-          where('month', '==', prevMonth),
-          where('year', '==', prevYear),
-        ),
-      );
-
-      if (!prevBudgetSnap.empty) {
-        const prevExpenses = (prevBudgetSnap.docs[0].data().expenses as BudgetExpense[]) ?? [];
-        const paidPlans = prevExpenses.filter((e) => e.isPaymentPlan && e.paid);
-
-        if (paidPlans.length > 0) {
-          await Promise.all(
-            paidPlans.map((e) => {
-              const newCurrent = (e.currentPayment ?? 0) + 1;
-              const update: Record<string, unknown> = { currentPayment: newCurrent };
-              if (newCurrent > (e.totalPayments ?? 0)) {
-                update.active = false;
-              }
-              return updateDoc(doc(db, 'expenses', e.expenseId), update);
-            }),
-          );
-        }
-      }
-    }
-
-    // Build fresh data from expenses + income collections
-    const freshData = await buildBudgetData(uid, month, year, existingExpenses);
-
-    if (existingDoc) {
-      // Update existing budget doc with fresh data
-      await updateDoc(doc(db, 'budgets', existingDoc.id), freshData);
-      return existingDoc.id;
-    }
-
-    // Create new budget doc
-    const newBudget = {
-      userId: uid,
-      month,
-      year,
-      ...freshData,
-      createdAt: serverTimestamp(),
-    };
-    const docRef = await addDoc(collection(db, 'budgets'), newBudget);
-    return docRef.id;
-  }, []);
-
-  useEffect(() => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
-
-    let unsubscribe: (() => void) | undefined;
-
-    (async () => {
-      try {
-        const id = await syncBudget(uid, currentMonth, currentYear);
-        setBudgetId(id);
-
-        unsubscribe = onSnapshot(doc(db, 'budgets', id), (snap) => {
-          if (snap.exists()) {
-            setBudget(snap.data() as BudgetDoc);
-          }
-          setLoading(false);
-        });
-      } catch {
-        Alert.alert(lang.common.error, lang.home.failedToLoad);
-        setLoading(false);
-      }
-    })();
-
-    return () => unsubscribe?.();
-  }, [currentMonth, currentYear, syncBudget]);
 
   async function handleTogglePaid(expenseId: string) {
     if (!budgetId || !budget) return;
@@ -333,7 +121,7 @@ export default function HomeScreen() {
       <View style={styles.listSection}>
         <Text style={styles.sectionTitle}>{lang.home.monthlyBudget}</Text>
 
-        {loading ? (
+        {loadingBudget ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>{lang.common.loading}</Text>
           </View>

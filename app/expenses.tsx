@@ -1,18 +1,16 @@
-import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 
-import { auth, db } from '@/firebaseconfig';
-import { ExpenseCard, type Expense } from '@/components/general/expense-card';
+import { ExpenseCard } from '@/components/general/expense-card';
 import { AppButton } from '@/components/general/app-button';
 import { BottomNavBar, type NavTab } from '@/components/general/bottom-nav-bar';
 import { useLanguage } from '@/context/language-context';
+import { useAppData } from '@/context/app-data-context';
 
 export default function ExpensesScreen() {
   const { lang } = useLanguage();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const { expenses, loadingExpenses } = useAppData();
 
   const tabs: NavTab[] = [
     { key: 'income', label: lang.nav.income, icon: 'arrow-down-outline' },
@@ -21,38 +19,6 @@ export default function ExpensesScreen() {
     { key: 'preview', label: lang.nav.preview, icon: 'trending-up-outline' },
     { key: 'settings', label: lang.nav.settings, icon: 'settings-outline' },
   ];
-
-  useEffect(() => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
-
-    const q = query(
-      collection(db, 'expenses'),
-      where('userId', '==', uid),
-      orderBy('createdAt', 'desc'),
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => {
-        const d = doc.data();
-        return {
-          id: doc.id,
-          title: d.title as string,
-          category: '',
-          amount: d.amount as number,
-          icon: d.icon as Expense['icon'],
-          iconBgColor: d.iconBgColor as string,
-          isPaymentPlan: d.isPaymentPlan as boolean | undefined,
-          totalPayments: d.totalPayments as number | undefined,
-          currentPayment: d.currentPayment as number | undefined,
-          active: (d.active ?? true) as boolean,
-        };
-      });
-      setExpenses(data);
-    });
-
-    return unsubscribe;
-  }, []);
 
   function handleTabPress(key: string) {
     if (key === 'expenses') return;
@@ -85,7 +51,9 @@ export default function ExpensesScreen() {
       <View style={styles.content}>
         {expenses.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>{lang.expenses.noExpenses}</Text>
+            <Text style={styles.emptyText}>
+              {loadingExpenses ? lang.common.loading : lang.expenses.noExpenses}
+            </Text>
           </View>
         ) : (
           <FlatList
